@@ -38,29 +38,39 @@ export const PhotoDetector: React.FC<PhotoDetectorProps> = ({ onSaveRecord }) =>
 
     playScanBeep();
 
-    const result = await analyzePhotoData(imgSrc, 'image/png');
+    try {
+      const mimeMatch = imgSrc.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);base64,/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const result = await analyzePhotoData(imgSrc, mime);
 
-    setTrustScore(result.trustScore);
-    setVerdictLabel(result.verdictLabel);
-    setSummaryText(result.summary);
-    setMetrics(result.metrics);
-    setIsScanning(false);
-    playSuccessChime();
+      setTrustScore(result.trustScore);
+      setVerdictLabel(result.verdictLabel);
+      setSummaryText(result.summary);
+      setMetrics(result.metrics);
+      playSuccessChime();
 
-    // Auto-save record to vault
-    const autoRecord: ScanRecord = {
-      id: `photo-${Date.now()}`,
-      category: 'photo',
-      fileName: name || 'Photo_Forensic_Scan.png',
-      timestamp: new Date().toISOString(),
-      trustScore: result.trustScore,
-      verdict: result.verdict,
-      verdictLabel: result.verdictLabel,
-      summary: result.summary,
-      metrics: result.metrics
-    };
-    onSaveRecord(autoRecord);
-    setSavedSuccess(true);
+      // Auto-save record to vault
+      const autoRecord: ScanRecord = {
+        id: `photo-${Date.now()}`,
+        category: 'photo',
+        fileName: name || 'Photo_Forensic_Scan.png',
+        timestamp: new Date().toISOString(),
+        trustScore: result.trustScore,
+        verdict: result.verdict,
+        verdictLabel: result.verdictLabel,
+        summary: result.summary,
+        metrics: result.metrics
+      };
+      onSaveRecord(autoRecord);
+      setSavedSuccess(true);
+    } catch (err: any) {
+      setTrustScore(0);
+      setVerdictLabel('⚠️ ANALYSIS ERROR');
+      setSummaryText(err.message || 'Gemini API call failed. Please check your GEMINI_API_KEY in Settings.');
+      setMetrics([]);
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

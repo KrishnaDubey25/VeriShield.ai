@@ -36,30 +36,38 @@ export const NewsChecker: React.FC<NewsCheckerProps> = ({ onSaveRecord }) => {
 
     playScanBeep();
 
-    const result = await analyzeNewsArticle(text);
+    try {
+      const result = await analyzeNewsArticle(text);
 
-    setTrustScore(result.trustScore);
-    setVerdictLabel(result.verdictLabel);
-    setAnalysisSummary(result.summary);
-    setMetrics(result.metrics);
-    setIsAnalyzing(false);
-    playSuccessChime();
+      setTrustScore(result.trustScore);
+      setVerdictLabel(result.verdictLabel);
+      setAnalysisSummary(result.summary);
+      setMetrics(result.metrics);
+      playSuccessChime();
 
-    const titleSnippet = text.slice(0, 45) + '...';
-    const record: ScanRecord = {
-      id: `news-${Date.now()}`,
-      category: 'news',
-      fileName: titleSnippet || 'News_Verification_Scan',
-      timestamp: new Date().toISOString(),
-      trustScore: result.trustScore,
-      verdict: result.verdict,
-      verdictLabel: result.verdictLabel,
-      summary: result.summary,
-      metrics: result.metrics
-    };
+      const titleSnippet = text.slice(0, 45) + '...';
+      const record: ScanRecord = {
+        id: `news-${Date.now()}`,
+        category: 'news',
+        fileName: titleSnippet || 'News_Verification_Scan',
+        timestamp: new Date().toISOString(),
+        trustScore: result.trustScore,
+        verdict: result.verdict,
+        verdictLabel: result.verdictLabel,
+        summary: result.summary,
+        metrics: result.metrics
+      };
 
-    onSaveRecord(record);
-    setSavedSuccess(true);
+      onSaveRecord(record);
+      setSavedSuccess(true);
+    } catch (err: any) {
+      setTrustScore(0);
+      setVerdictLabel('⚠️ ANALYSIS ERROR');
+      setAnalysisSummary(err.message || 'Gemini API call failed. Please check your GEMINI_API_KEY in Settings.');
+      setMetrics([]);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (

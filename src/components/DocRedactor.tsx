@@ -50,31 +50,39 @@ export const DocRedactor: React.FC<DocRedactorProps> = ({ onSaveRecord }) => {
 
     playScanBeep();
 
-    const result = await analyzeDocPII(imgSrc, 'image/png');
+    try {
+      const mimeMatch = imgSrc.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);base64,/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const result = await analyzeDocPII(imgSrc, mime);
 
-    setRedactions(result.piiBoxes);
-    setIsProcessing(false);
-    playSuccessChime();
+      setRedactions(result.piiBoxes);
+      playSuccessChime();
 
-    const record: ScanRecord = {
-      id: `doc-${Date.now()}`,
-      category: 'doc',
-      fileName: name || 'Confidential_Document.pdf',
-      timestamp: new Date().toISOString(),
-      trustScore: 100,
-      verdict: 'safe',
-      verdictLabel: '✓ 100% SECURE & PII MASKED',
-      summary: result.summary,
-      metrics: [
-        { label: 'PII Detection Precision', score: 100, description: `${result.piiBoxes.length} sensitive zones localized.` },
-        { label: 'Client Canvas Masking Integrity', score: 100, description: 'Zero leak client masking.' },
-        { label: 'Document Tamper Integrity', score: 100, description: 'Client-side encrypted redacts.' }
-      ],
-      detectedPIICount: result.piiBoxes.length
-    };
+      const record: ScanRecord = {
+        id: `doc-${Date.now()}`,
+        category: 'doc',
+        fileName: name || 'Confidential_Document.pdf',
+        timestamp: new Date().toISOString(),
+        trustScore: 100,
+        verdict: 'safe',
+        verdictLabel: '✓ SECURE & PII MASKED',
+        summary: result.summary,
+        metrics: [
+          { label: 'PII Detection Precision', score: 100, description: `${result.piiBoxes.length} sensitive zones localized.` },
+          { label: 'Client Canvas Masking Integrity', score: 100, description: 'Zero leak client masking.' },
+          { label: 'Document Tamper Integrity', score: 100, description: 'Client-side encrypted redacts.' }
+        ],
+        detectedPIICount: result.piiBoxes.length
+      };
 
-    onSaveRecord(record);
-    setSavedSuccess(true);
+      onSaveRecord(record);
+      setSavedSuccess(true);
+    } catch (err: any) {
+      setRedactions([]);
+      alert(err.message || 'Gemini API document analysis failed. Please check your GEMINI_API_KEY in Settings.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const downloadRedactedCanvas = () => {

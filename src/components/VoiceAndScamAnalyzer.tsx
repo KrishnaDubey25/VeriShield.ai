@@ -111,30 +111,38 @@ export const VoiceAndScamAnalyzer: React.FC<VoiceAndScamAnalyzerProps> = ({ onSa
 
     playScanBeep();
 
-    const result = await analyzeScamMessage(text);
+    try {
+      const result = await analyzeScamMessage(text);
 
-    setTextTrustScore(result.trustScore);
-    setTextVerdictLabel(result.verdictLabel);
-    setTextSummary(result.summary);
-    setTextMetrics(result.metrics);
-    setIsAnalyzingText(false);
-    playSuccessChime();
+      setTextTrustScore(result.trustScore);
+      setTextVerdictLabel(result.verdictLabel);
+      setTextSummary(result.summary);
+      setTextMetrics(result.metrics);
+      playSuccessChime();
 
-    const snippet = text.slice(0, 40) + '...';
-    const record: ScanRecord = {
-      id: `scam-${Date.now()}`,
-      category: 'scam_text',
-      fileName: snippet || 'SMS_Email_Phishing_Check',
-      timestamp: new Date().toISOString(),
-      trustScore: result.trustScore,
-      verdict: result.verdict,
-      verdictLabel: result.verdictLabel,
-      summary: result.summary,
-      metrics: result.metrics
-    };
+      const snippet = text.slice(0, 40) + '...';
+      const record: ScanRecord = {
+        id: `scam-${Date.now()}`,
+        category: 'scam_text',
+        fileName: snippet || 'SMS_Email_Phishing_Check',
+        timestamp: new Date().toISOString(),
+        trustScore: result.trustScore,
+        verdict: result.verdict,
+        verdictLabel: result.verdictLabel,
+        summary: result.summary,
+        metrics: result.metrics
+      };
 
-    onSaveRecord(record);
-    setSavedTextSuccess(true);
+      onSaveRecord(record);
+      setSavedTextSuccess(true);
+    } catch (err: any) {
+      setTextTrustScore(0);
+      setTextVerdictLabel('⚠️ ANALYSIS ERROR');
+      setTextSummary(err.message || 'Gemini API call failed. Please check your GEMINI_API_KEY in Settings.');
+      setTextMetrics([]);
+    } finally {
+      setIsAnalyzingText(false);
+    }
   };
 
   return (

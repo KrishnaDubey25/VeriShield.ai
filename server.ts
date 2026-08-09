@@ -13,20 +13,16 @@ app.use(express.json({ limit: "30mb" }));
 
 let aiClient: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI | null {
-  if (!aiClient) {
-    const key = process.env.GEMINI_API_KEY;
-    if (key) {
-      aiClient = new GoogleGenAI({
-        apiKey: key,
-        httpOptions: {
-          headers: {
-            "User-Agent": "aistudio-build",
-          },
-        },
-      });
-    }
-  }
-  return aiClient;
+  const key = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  if (!key) return null;
+  return new GoogleGenAI({
+    apiKey: key,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
 }
 
 // 1. News Credibility Analysis Endpoint
@@ -39,7 +35,7 @@ app.post("/api/analyze/news", async (req, res) => {
 
     const ai = getAI();
     if (!ai) {
-      return res.status(503).json({ error: "Gemini API key not configured" });
+      return res.status(503).json({ error: "Gemini API key not configured. Please set GEMINI_API_KEY in environment or AI Studio settings." });
     }
 
     const response = await ai.models.generateContent({
@@ -47,7 +43,11 @@ app.post("/api/analyze/news", async (req, res) => {
       contents: `Perform an objective, rigorous news credibility analysis for the following article text or headline:
 "${text}"
 
-Evaluate key factual claims, source citations, emotional bias/sensationalism, and logical consistency. Provide accurate ratings (0-100%).`,
+Evaluate key factual claims, source attributions, emotional bias/sensationalism, clickbait phrasing, and logical consistency.
+Be critical:
+- If the text is sensational clickbait, satirical, or contains unverified claims, assign a lower trust score (<65) and set appropriate verdict ('suspicious', 'misleading', or 'satire').
+- If it is neutral, well-supported, or standard reporting, assign trust score (80-100) and set verdict 'credible'.
+Provide detailed, informative descriptions in summary and metrics explaining specific claims evaluated.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -93,21 +93,25 @@ app.post("/api/analyze/scam", async (req, res) => {
 
     const ai = getAI();
     if (!ai) {
-      return res.status(503).json({ error: "Gemini API key not configured" });
+      return res.status(503).json({ error: "Gemini API key not configured. Please set GEMINI_API_KEY in environment or AI Studio settings." });
     }
 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
-      contents: `Analyze the following message / SMS / email / voice transcript for security threats, scams, phishing links, social engineering tactics, or legitimate notifications:
+      contents: `Analyze the following message / SMS / email / voice transcript for security threats, scams, phishing links, social engineering tactics, fake bank alerts, or legitimate notifications:
 "${text}"
 
-Provide a precise threat assessment.`,
+Provide a precise, rigorous threat assessment.
+Be critical:
+- If it contains phishing links, suspicious urgency pressure, account suspension threats, gift card/crypto/wire demands, or credential requests, assign a low trust score (<40) and set verdict 'scam'.
+- If it has mild cautions or unverified links, assign trust score (40-75) and verdict 'warning'.
+- If it is clearly standard benign text or verified notification, assign trust score (80-100) and verdict 'safe'.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            trustScore: { type: Type.NUMBER, description: "Safety score out of 100 (100 = completely safe & verified, <50 = dangerous scam)" },
+            trustScore: { type: Type.NUMBER, description: "Safety score out of 100 (100 = safe, <40 = dangerous scam)" },
             verdict: { type: Type.STRING, description: "safe, warning, or scam" },
             verdictLabel: { type: Type.STRING },
             summary: { type: Type.STRING, description: "Detailed security analysis explaining identified risks or verified safety cues" },
@@ -147,9 +151,11 @@ app.post("/api/analyze/photo", async (req, res) => {
 
     const ai = getAI();
     if (!ai) {
-      return res.status(503).json({ error: "Gemini API key not configured" });
+      return res.status(503).json({ error: "Gemini API key not configured. Please set GEMINI_API_KEY in environment or AI Studio settings." });
     }
 
+    const mimeMatch = imageBase64.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);base64,/);
+    const actualMime = mimeMatch ? mimeMatch[1] : (mimeType || "image/png");
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
 
     const response = await ai.models.generateContent({
@@ -158,13 +164,22 @@ app.post("/api/analyze/photo", async (req, res) => {
         parts: [
           {
             inlineData: {
-              mimeType: mimeType || "image/png",
+              mimeType: actualMime,
               data: cleanBase64
             }
           },
           {
-            text: `Examine this photo for visual authenticity, AI generation indicators (Midjourney, DALL-E, Stable Diffusion, Flux), face manipulation, lighting consistency, texture patterns, and visual subject.
-Describe specifically what is depicted in the photo and provide a factual, realistic forensic evaluation.`
+            text: `You are an expert digital forensics analyst specializing in photo authenticity, Photoshop detection, and AI image identification.
+Examine this image thoroughly:
+1. Describe specifically what is depicted in the photo (objects, person, facial features, clothing, background scene, text).
+2. Look for explicit visual markers of AI image generation (Midjourney, DALL-E, Stable Diffusion, Flux, Imagen, Sora): plastic skin texture, unnatural eye/pupil shapes, deformed fingers/hands, impossible reflection angles, strange text/symbol artifacts, overly smooth lighting.
+3. Look for digital editing / Photoshop manipulation (cloned regions, warping, edge blur).
+4. Assign a realistic trust score (0 to 100):
+   - 80-100: Likely authentic photograph
+   - 45-79: Digitally edited/retouched
+   - 0-44: AI-generated or deepfake
+5. Set verdict to 'authentic', 'ai_generated', 'edited', or 'deepfake'.
+6. Provide a detailed summary detailing your exact visual findings.`
           }
         ]
       },
@@ -175,8 +190,8 @@ Describe specifically what is depicted in the photo and provide a factual, reali
           properties: {
             trustScore: { type: Type.NUMBER, description: "Authenticity score 0-100" },
             verdict: { type: Type.STRING, description: "authentic, ai_generated, edited, or deepfake" },
-            verdictLabel: { type: Type.STRING },
-            summary: { type: Type.STRING, description: "Detailed report describing the photo contents, optical lighting, and forensic indicators" },
+            verdictLabel: { type: Type.STRING, description: "Title badge like '⚠️ AI GENERATED IMAGE DETECTED' or '✓ VERIFIED AUTHENTIC PHOTO'" },
+            summary: { type: Type.STRING, description: "Detailed forensic observation describing image content and detected artifacts" },
             metrics: {
               type: Type.ARRAY,
               items: {
@@ -358,4 +373,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
