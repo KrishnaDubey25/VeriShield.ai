@@ -1,0 +1,6 @@
+{
+  "name": "VeriAI",
+  "description": "100% Privacy-First Zero-Knowledge Media & Content Verification Platform",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

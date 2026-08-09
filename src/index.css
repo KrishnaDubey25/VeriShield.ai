@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-orbitron, .font-syne, .font-times, .font-serif {
+    font-family: 'Times New Roman', Times, Georgia, serif;
+  }
+  .font-mono-code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  
+  /* Vibrant Glass Panels & Cards */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+  }
+
+  .glow-card {
+    box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  }
+  
+  .glow-card-hover {
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glow-card-hover:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.25), 0 8px 12px -4px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Vibrant Colorful Accent Shadows */
+  .glow-indigo {
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
+  }
+  .glow-emerald {
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
+  }
+  .glow-purple {
+    box-shadow: 0 0 25px rgba(168, 85, 247, 0.35);
+  }
+  .glow-rose {
+    box-shadow: 0 0 25px rgba(244, 63, 94, 0.35);
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.08); }
+}
+
+@keyframes rotateGradient {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+@keyframes floatAnim {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes smoothScan {
+  0% { top: 0%; opacity: 0.9; }
+  50% { top: 95%; opacity: 1; }
+  100% { top: 0%; opacity: 0.9; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulseGlow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.animate-rotateGradient {
+  animation: rotateGradient 12s linear infinite;
+}
+
+.animate-float {
+  animation: floatAnim 4s ease-in-out infinite;
+}
+
+.animate-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #4F46E5 20%, #10B981 50%, #E11D48 80%, transparent);
+  box-shadow: 0 0 18px rgba(79, 70, 229, 0.9);
+  animation: smoothScan 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  z-index: 20;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+::-webkit-scrollbar-thumb {
+  background: #A5B4FC;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6366F1;
+}
+
